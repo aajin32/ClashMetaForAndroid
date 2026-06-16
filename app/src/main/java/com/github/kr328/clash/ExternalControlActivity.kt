@@ -25,6 +25,8 @@ import com.github.kr328.clash.design.R
 class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
 
         when(intent.action) {
             Intent.ACTION_VIEW -> {
@@ -40,13 +42,18 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
                         }
                         val name = uri.getQueryParameter("name") ?: getString(R.string.new_profile)
 
+                        val parsedInterval = uri.getQueryParameter("update-interval")?.toLongOrNull() ?: 0L
+                        val updateInterval = if (parsedInterval > 0) parsedInterval.coerceAtLeast(15L) else 0L
+                        val intervalMs = java.util.concurrent.TimeUnit.MINUTES.toMillis(updateInterval)
+
                         create(type, name).also {
-                            patch(it, name, url, 0)
+                            patch(it, name, url, intervalMs, null)
                         }
                     }
                     startActivity(PropertiesActivity::class.intent.setUUID(uuid))
                     finish()
                 }
+                return
             }
 
             Intents.ACTION_TOGGLE_CLASH -> if(Remote.broadcasts.clashRunning) {
@@ -89,5 +96,11 @@ class ExternalControlActivity : Activity(), CoroutineScope by MainScope() {
     private fun stopClash() {
         stopClashService()
         Toast.makeText(this, R.string.external_control_stopped, Toast.LENGTH_LONG).show()
+    }
+
+    override fun finish() {
+        super.finish()
+        @Suppress("DEPRECATION")
+        overridePendingTransition(0, 0)
     }
 }
